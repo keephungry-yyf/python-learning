@@ -1,0 +1,39 @@
+class ipSunetRoute(object):
+    def ipToBinary(self,ip):
+        '''ip前缀转化为二进制'''
+        ip_num = ip.split('.')
+        x = 0
+        for i in range(len(ip_num)):
+            num = int(ip_num[i]) << (24 - i * 8)
+            x = x | num
+        brnary = str(bin(x).replace('0b', ''))
+        return brnary
+
+    def maskToBinary(self, mask):
+        '''将掩码转换为二进制'''
+        mask_list = str(mask).split('.')
+        if len(mask_list) == 1:
+            binary32 = []
+            for i in range(32):
+                binary32.append('0')
+            for i in range(int(mask)):
+                binary32[i] = '1'
+                binary = ''.join(binary32)
+        elif len(mask_list) == 4:
+            binary = self.ipToBinary(mask)
+        return binary
+
+    def ipInSubnet(self, ip, subnet):
+        '''判断是否在同一网段'''
+        sub_list = subnet.split('/')
+        network_add = sub_list[0]
+        network_mask = sub_list[1]
+        ip_num = int(self.ipToBinary(ip),2)
+        sub_num = int(self.ipToBinary(network_add),2)
+        mask_bin = int(self.maskToBinary(network_mask),2)
+        if (ip_num & mask_bin) == (sub_num & mask_bin):
+            return True
+        else:
+            return False
+
+
