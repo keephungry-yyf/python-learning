@@ -1,0 +1,34 @@
+import paramiko,datetime,difflib
+'''通过paramiko模块批量登录设备并查看设备配置，然后通过difflib模块对配置前后比对来得知网络设备配置是否修改过'''
+name = 'username' 
+password = 'password' 
+filename = 'iplist.txt' 
+ips = open(filename,'r')
+for line in ips.readlines():
+    ip = line.strip()
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh_client.connect(hostname=ip,username=name,password=password)
+    print(f'connect to {ip}')
+    command = ssh_client.invoke_shell()
+    command.send('screen-length 0 temporary\n ')
+    command.send('disp cu\n')
+    time.sleep(1)
+    output = command.recv(65535).decode("ascii")
+    with open(ip + '_' + datetime.date.today().isoformat(),'w') as today_file,open(ip + '_' + (datetime.date.today() - datetime.timedelta(days=1)).isoformat()) as yestarday_file:
+        today_file.write(output)
+        today_file.close()
+        today_file = open(ip + '_' + datetime.date.today().isoformat())
+        diff = list(difflib.ndiff(yestarday_file.readlines(),today_file.readlines()))
+    with open(ip + '_' + datetime.date.today().isoformat() + '_report', 'w') as report_file:
+            for index, line in enumerate(diff):
+                if line.startswith('- ') and diff[index + 1].startswith(('?', '+')) == False:
+                    report_file.write('\n已被移除的旧配置： ' + '\n\n' + line + '\n----------------\n\n')
+                elif line.startswith('+ ') and diff[index + 1].startswith('?') == False:
+                    report_file.write('\n已被添加的新配置： ' + '\n\n' + '...\n' + diff[index - 2] + diff[index - 1] + line + '...\n' + '\n----------------\n')
+                elif line.startswith('- ') and diff[index + 1].startswith('?') and diff[index + 2].startswith('+ ') and diff[index + 3].startswith('?'):
+                    report_file.write('\n已被修改的配置（长度不变或变短）: \n\n' + line + diff[index + 1] + diff[index + 2] + diff[index + 3] + '\n----------------\n')
+                elif line.startswith('- ') and diff[index + 1].startswith('+') and diff[index + 2].startswith('? '):
+                    report_file.write('\n已被修改的配置（长度变长）: \n\n' + line + diff[index + 1] + diff[index + 2] + '\n----------------\n')
+                else:
+                    pass
