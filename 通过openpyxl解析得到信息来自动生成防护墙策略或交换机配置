@@ -1,0 +1,56 @@
+import openpyxl,os,datetime
+times = datetime.datetime.now()
+time_now = times.strftime('%Y%m%d%H%M%S')
+os.makedirs(f'{time_now}')
+os.chdir(f'.\\{time_now}')
+filename = '模板.xlsx' #文件名
+file_1 = openpyxl.load_workbook(filename) #打开文件
+sheet_name = file_1.get_sheet_names() #获取sheet名
+sheet_1 = file_1.get_sheet_by_name('Sheet1') #获取sheet值
+max_row = sheet_1.max_row #最大行数
+max_column = sheet_1.max_column #最大列数
+for i in range(2,max_row+1):
+'''防火墙策略需分成三种情况 1.流量过单台防火墙，只需生成一台防火墙的配置  2.流量过两台防火墙，流量路径不一致，需生成两台防火墙的配置且要配置反向策略 3.流量过两台防火墙，流量路径一致，生成两台防火墙的配置，无需反向策略'''
+    source_name = open(sheet_1.cell(row=i,column=3).value,'a')  #生成的脚本文件名以本端设备CI命名
+    des_name = open(sheet_1.cell(row=i,column=8).value,'a')  #生成的脚本文件名以对端设备CI命名
+    protocol = sheet_1.cell(row=i,column=2).value  #协议
+    source_ip = sheet_1.cell(row=i,column=4).value  #源IP
+    source_port = sheet_1.cell(row=i,column=6).value  #源端口
+    destination_ip = sheet_1.cell(row=i,column=9).value  #目的IP
+    destination_port = sheet_1.cell(row=i,column=11).value  目的端口
+    person = sheet_1.cell(row=i,column=12).value #申请人
+    number = sheet_1.cell(row=i,column=13).value  #申请人工号
+    a = source_ip.split(',')  #对多个源IP段解析成单个网段或IP
+    b = len(source_ip.split(','))
+    c = destination_ip.split(',')  #对多个目的IP段解析成单个网段或IP
+    d = len(destination_ip.split(','))
+    source_name.write(f"security-policy\nrule name {number}\ndescription {person}\n")
+    for j in range(0, b):
+    '''对源IP段解析成IP和掩码'''
+            sip = a[j]
+            s_ip = a[j].split('/')[0]
+            mask = a[j].split('/')[1]
+            source_name.write(f"source-address {s_ip} {mask}\n ")
+    for k in range(0, d):
+    '''对目的IP段解析成IP和掩码'''
+            dip = c[k]
+            d_ip = c[k].split('/')[0]
+            mask_d = c[k].split('/')[1]
+            source_name.write(f"destination-address {d_ip} {mask_d}\n")
+    source_name.write(
+            f"service protocol {protocol} source-port {source_port} destination-port {destination_port}\naction permit\n#\n")
+    if sheet_1.cell(row=i,column=3).value != sheet_1.cell(row=i,column=8).value:
+    '''两端防火墙不一样则两边防火墙的脚本都需生成'''
+        des_name.write(f"security-policy\nrule name {number}\ndescription {person}\n")
+        for x in range(0, d):
+            sip = c[x]
+            s_ip = c[x].split('/')[0]
+            mask_s = c[x].split('/')[1]
+            des_name.write(f"source-address {s_ip} {mask_s}\n ")
+        for y in range(0, b):
+            dip_1 = a[y]
+            d_ip1 = a[y].split('/')[0]
+            mask_d1 = a[y].split('/')[1]
+            des_name.write(f"destination-address {d_ip1} {mask_d1}\n")
+        des_name.write(
+            f"service protocol {protocol} source-port {destination_port} destination-port {source_port}\naction permit\n#\n")
