@@ -1,0 +1,22 @@
+import paramiko,time,schedule
+name = 'username'
+filename = 'iplist.txt'
+password = 'password'
+ips = open(filename,'r')
+def job():
+    for line in ips.readlines():
+        ip = line.strip()
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(hostname=ip, username=name, password=password)
+        print(f'connect to {ip}')
+        command = ssh_client.invoke_shell()
+        command.send('screen-length 0 temporary\n ')
+        command.send('disp cu\n')
+        time.sleep(1)
+        output = command.recv(65535).decode("ascii")
+        return output
+schedule.every().friday.at("05:00").do(job)
+
+while True:
+    schedule.run_pending()
