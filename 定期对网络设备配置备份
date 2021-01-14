@@ -15,7 +15,10 @@ def job():
         command.send('disp cu\n')
         time.sleep(1)
         output = command.recv(65535).decode("ascii")
-        return output
+        backup = open(ip + '.txt', 'a+')
+        backup.write(output)
+        backup.close()
+        print(f'{ip} done')
 schedule.every().friday.at("05:00").do(job)
 
 while True:
