@@ -1,0 +1,25 @@
+import threading
+from queue import Queue
+import time
+from netmiko import ConnectHandler
+
+f = open('ip_list.txt')
+threads = []
+
+def ssh_session(ip, output_q):
+    commands = ["disp ip int b"]
+    SW = {'device_type': 'huawei', 'ip': ip, 'username': 'admin', 'password': 'admin'}
+    ssh_session = ConnectHandler(**SW)
+    output = ssh_session.send_config_set(commands)
+    print(output)
+
+
+print(f"程序于 {time.strftime('%X')} 开始执行\n")
+for ips in f.readlines():
+    t = threading.Thread(target=ssh_session, args=(ips.strip(), Queue()))
+    t.start()
+    threads.append(t)
+
+for i in threads:
+    i.join()
+print(f"\n程序于 {time.strftime('%X')} 执行结束")
